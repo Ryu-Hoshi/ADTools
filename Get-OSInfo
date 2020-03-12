@@ -1,0 +1,99 @@
+function Get-OSInfo {
+
+<#
+
+.SYNOPSIS
+
+Retrieves basic Operating System information from one or more computers.
+
+ 
+
+.DESCRIPTION
+
+See the synopsis. This isn't complex. Note that this command uses WMI, not CIM,
+
+to connect to remote computers.
+
+ 
+
+.PARAMETER Computer
+
+One or more computer names, or IP addresses, to query.
+
+For example:
+
+Get-DiskpaceInfo -computerName One,TWO,THREE
+
+ 
+
+.PARAMETER LocalOnly
+
+Specify this to include only local didsks in the output.
+
+This is one by default. To Turn it off:
+
+Get-DiskSpaceInfo -ComputerName CLIENT -LocalOnly:$false
+
+ 
+
+.EXAMPLE
+
+Get-OSInfo -Computername ONE,TWO
+
+This example retrieves Operating System info from computeers ONE and TWO
+
+ 
+
+.EXAMPLE
+
+Get-OSInfo -ComputerName 192.168.4.4
+
+This example retrieves Operating System info from a computer that is specfied by IP address
+
+ 
+
+.LINK
+
+https://github.com/Ryu-Hoshi/ADTools
+
+#>
+
+    param(
+        [ValidateScript({Test-Connection -ComputerName $_ -SilentlyContinue -Count 1})]
+        [string[]]$ComputerName
+
+    )
+
+    BEGIN{}
+
+    PROCESS{
+
+        foreach($computer in $ComputerName){
+
+            $os = gwmi -class Win32_OperatingSystem -ComputerName $computer
+
+            $props = [ordered]@{'Name'=$os.CSName;
+
+                       'OS'=$os.Name;
+
+                       'SP'=$os.CSDVersion;
+
+                       'Architecture'=$os.OSArchitecture;
+
+                       'Make'=$os.Manufacturer;
+
+                       'Model'=$os.BuildType;
+
+                       'Installed'=$os.ConvertToDateTime($os.InstallDate);
+
+                       }
+
+            New-Object -TypeName PSObject -Property $props
+
+            }
+
+    }
+
+    END{}
+
+}
