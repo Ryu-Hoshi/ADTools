@@ -70,7 +70,7 @@ https://github.com/Ryu-Hoshi/ADTools
 
         foreach($computer in $ComputerName){
 
-            $os = gwmi -class Win32_OperatingSystem -ComputerName $computer
+            $os = Get-WmiObject -class Win32_OperatingSystem -ComputerName $computer
 
             $props = [ordered]@{'Name'=$os.CSName;
 
