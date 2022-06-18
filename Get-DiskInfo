@@ -1,0 +1,177 @@
+function Get-Diskinfo {
+
+<#
+
+.SYNOPSIS
+
+Retrieves basic disk capacity information from one or more computers.
+
+ 
+
+.DESCRIPTION
+
+See the synopsis. This isn't complex. Note that this command uses WMI, not CIM,
+
+to connect to remote computers. It does not allow you to specify alternate credentials
+
+ 
+
+.PARAMETER Computer
+
+One or more computer names, or IP addresses, to query.
+
+For example:
+
+Get-DiskpaceInfo -computerName One,TWO,THREE
+
+ 
+
+.PARAMETER LocalOnly
+
+Specify this to include only local didsks in the output.
+
+This is one by default. To Turn it off:
+
+Get-DiskSpaceInfo -ComputerName CLIENT -LocalOnly:$false
+
+ 
+
+.EXAMPLE
+
+Get-DiskSpaceInfo -Computername ONE,TWO
+
+This example retrieves disk space info from computeers ONE and TWO
+
+ 
+
+.EXAMPLE
+
+Get-DiskSpaceInfo -ComputerName 192.168.4.4
+
+This example retrieves disk space info from a computer that is specfied by IP address
+
+ 
+
+.LINK
+
+http://www.google.co.nz
+
+ 
+
+.LINK
+
+http://www.scriptingguy.com
+
+#>
+
+    [CmdletBinding()]
+
+    param(
+
+        [Parameter(Mandatory=$True,
+
+                   Position=1,
+
+                   HelpMessage='Computer to query',
+
+                   ValueFromPipeline=$True,
+
+                   ValueFromPipelineByPropertyName=$True)]
+
+        [alias('hostname')]
+
+        [string[]]$ComputerName,
+
+ 
+
+ 
+
+        [Parameter(Position=2,
+
+                   ValueFromPipeline=$True,
+
+                   ValueFromPipelineByPropertyName=$True)]
+
+        [ValidateSet('Floppy','Local','Optical')]
+
+        [string]$DriveType = $exampleDriveTypePreference,
+
+ 
+
+        [string[]]$ErrorLogFile = $exampleErrorLogFile
+
+       
+
+    )
+
+    BEGIN{
+
+ 
+
+        Try {
+
+        Remove-Item -Path $ErrorLogFile -ErrorAction SilentlyContinue
+
+        } catch {
+
+        Write-Verbose "No error log exists...continue"
+
+        }
+
+    }
+
+    PROCESS{
+
+        foreach($computer in $computername) {
+
+        $params = @{'Computername'=$computer;
+
+                    'Class'='Win32_LogicalDisk'}
+
+        switch ($DriveType) {
+
+            'Local' {$params.add('Filter','DriveType=3'); break}
+
+            'Floppy' {$params.add('Filter','DriveType=2'); break}
+
+            'Optical' {$params.add('Filter','DriveType=5'); break}           
+
+        }
+
+        try {
+
+            gwmi @params -EA Stop |
+
+            Select-Object @{n='Drive';e={$_.DeviceID}},
+
+                          @{n='Name';e={$computer}},
+
+                          @{n='Size';e={"{0:N2}" -f ($_.size /1GB)}},
+
+                          @{n='FreeSpace';e={"{0:N2}" -f ($_.freespace /1GB)}},
+
+                          @{n='UsedSpace';e={"{0:N2}" -f ($_.size /1GB - $_.freespace /1GB)}},
+
+                          @{n='Used%';e={"{0:N2}" -f ($_.size /1GB) /100 * ( $_.size /1GB - $_.freespace /1GB ) }}
+
+        } catch {
+
+            $computer | Out-File $ErrorLogFile -Append
+
+ 
+
+        } finally {
+
+ 
+
+        }
+
+ 
+
+        }
+
+    }
+
+    END{}
+
+}
